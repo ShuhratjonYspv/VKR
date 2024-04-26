@@ -1,0 +1,78 @@
+from transformers import pipeline, BertTokenizer, RobertaTokenizer, ElectraTokenizer, T5Tokenizer
+import torch
+
+# Функция для вычисления частоты слов в тексте
+def word_frequency(text):
+    words = text.split()
+    return len(words)
+
+# Функция для вычисления средней длины предложений в тексте
+def average_sentence_length(text):
+    sentences = text.split('.')
+    lengths = [len(sentence.split()) for sentence in sentences if len(sentence.split()) > 0]
+    if len(lengths) > 0:
+        return sum(lengths) / len(lengths)
+    else:
+        return 0
+
+# Функция для вычисления разнообразия текстов (просто возвращает длину текста в символах)
+def text_diversity(text):
+    return len(text)
+
+# Функция для генерации текста с помощью модели
+def generate_text(model_name, prompt_text, num_outputs=1):
+    if model_name.lower() == 'bert':
+        tokenizer = BertTokenizer.from_pretrained(model_name)
+        model = pipeline('text-generation', model=model_name, tokenizer=tokenizer)
+    elif model_name.lower() == 'roberta':
+        tokenizer = RobertaTokenizer.from_pretrained(model_name)
+        model = pipeline('text-generation', model=model_name, tokenizer=tokenizer)
+    elif model_name.lower() == 'electra':
+        tokenizer = ElectraTokenizer.from_pretrained(model_name)
+        model = pipeline('text-generation', model=model_name, tokenizer=tokenizer)
+    elif model_name.lower() == 't5':
+        tokenizer = T5Tokenizer.from_pretrained(model_name)
+        model = pipeline('text2text-generation', model=model_name, tokenizer=tokenizer)
+    else:
+        model = pipeline('text-generation', model=model_name)
+
+    outputs = model(prompt_text, max_length=100, num_return_sequences=num_outputs)
+    generated_texts = [output['generated_text'].strip() for output in outputs]
+    return generated_texts
+
+# Список моделей для сравнения
+models = ['gpt-3', 'bert-base-uncased', 'roberta-base', 'google/electra-small-discriminator', 't5-small', 'allenai/longformer-large-4096']
+
+# Пример текста-промпта для генерации
+prompt_text = "Почему Родион Раскольников неправ в своем суждении в романе Достоевского «Преступление и наказание» "
+
+# Создаем словарь для хранения результатов
+results = {}
+
+# Перебираем каждую модель
+for model_name in models:
+    print(f"Processing model: {model_name}")
+
+    # Генерируем текст с помощью модели
+    generated_texts = generate_text(model_name, prompt_text)
+    generated_text = generated_texts[0] if generated_texts else ""
+
+    # Вычисляем характеристики текста
+    freq_words = word_frequency(generated_text)
+    avg_length = average_sentence_length(generated_text)
+    diversity = text_diversity(generated_text)
+
+    # Сохраняем результаты для модели
+    results[model_name] = {
+        'Частота слов': freq_words,
+        'Средняя длина предложений': avg_length,
+        'Разнообразие текстов': diversity,
+        'Время генерации текста': 0.0  # Эту характеристику можно заполнить, если будет использоваться более сложный способ оценки времени
+    }
+
+# Выводим результаты сравнения
+print("\nРезультаты сравнения характеристик моделей:")
+for model_name, metrics in results.items():
+    print(f"\nМодель: {model_name}")
+    for metric_name, value in metrics.items():
+        print(f"{metric_name}: {value}")
